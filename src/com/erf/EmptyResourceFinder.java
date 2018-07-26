@@ -302,15 +302,6 @@ public class EmptyResourceFinder
 				    	if(!flag)
 				    		continue;
 
-//				    	boolean flag2 = false;
-//				    	for(String f : captionFilterList)
-//				    	{
-//				    		if(file.getName().matches(f))
-//				    		{
-//				    			flag2 = true;
-//				    			continue;
-//				    		}	
-//				    	}
 				    	
 //				    	System.out.println(file.getName());
 				    	DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -319,18 +310,12 @@ public class EmptyResourceFinder
 //						if (document.hasChildNodes()) 
 //						{
 ////							printNodeList(document.getChildNodes());
-//						}
-						
-
-				    
+//						}			    
 				    }
-				}
-				
+				}		
 			}
 			if(fw != null)
 				fw.close();
-			
-			//txt
 			
 //			if(map != null)
 //			{
