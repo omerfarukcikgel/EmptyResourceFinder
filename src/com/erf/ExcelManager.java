@@ -233,7 +233,7 @@ public class ExcelManager {
 		 setColNames(new String[]{"colname1", "colname2", "colnamek", "oof","fffff"}, workbook, sheet);
 		 AppendData(new String[]{"this", "is", "a" , "test", "!"}, workbook, sheet);
 		 AppendData(new String[] {"test", "d a t a", "t e s t", "data"}, workbook, sheet);
-		 AppendData(new String[] {"test", "d a t a", "I am in a lot of pain", "data"}, workbook, sheet);
+		 AppendData(new String[] {"test", "d a t a", "data", "data"}, workbook, sheet);
 		 
 		
 		 
@@ -242,10 +242,10 @@ public class ExcelManager {
 		 SaveWorkbook(workbook, "D:\\eXCEL\\testSheet.xls"); 
 		 
 		 HSSFWorkbook IAMBACK = OpenExcelWorkbook("D:\\eXCEL\\testSheet.xls");
-		 AppendData(new String[] {"oof", "d a t a", "Please", "data"}, IAMBACK, IAMBACK.getSheet("sheet1test"));
+		 AppendData(new String[] {"data", "d a t a", "test test test", "data"}, IAMBACK, IAMBACK.getSheet("sheet1test"));
 		 
 		 markMatches("oof", genBasicCellStyle(IndexedColors.BRIGHT_GREEN, HSSFColorPredefined.YELLOW, IAMBACK), 0, IAMBACK, IAMBACK.getSheet("sheet1test"));
-		 SaveWorkbook(IAMBACK, "D:\\eXCEL\\IAMBACK.xls"); 
+		 SaveWorkbook(IAMBACK, "D:\\eXCEL\\testSheet2.xls"); 
 	 }
 
 	
