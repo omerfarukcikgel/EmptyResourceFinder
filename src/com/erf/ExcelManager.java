@@ -72,6 +72,20 @@ public class ExcelManager {
 		return sheet;
 	}
 	
+	
+	public static HSSFSheet OpenExcelSheet(HSSFWorkbook workbook, String sheetName) 
+	{
+		HSSFSheet worksheet = workbook.getSheet(sheetName);
+		if(worksheet != null) 
+		{
+			return worksheet;
+		}
+		else 
+		{
+			return null;
+		}
+	}
+	
 	/**
 	 * Appends given string array to a row
 	 * @param Data
@@ -165,8 +179,7 @@ public class ExcelManager {
 	{
 		
 		Pattern regPattern = Pattern.compile(regexPattern);	
-		int changeCount = 0;
-		
+		int changeCount = 0;	
 		Iterator rowIterator = worksheet.rowIterator();
 		
 		while(rowIterator.hasNext()) 
@@ -176,7 +189,7 @@ public class ExcelManager {
 			{
 				HSSFCell currentCell = ((HSSFCell)cellIterator.next());
 				
-				if(currentCell.getColumnIndex() == columnIndex) //If this cell is at the given column index
+				if(currentCell.getColumnIndex() == columnIndex && currentCell.getRowIndex() != 0) //If this cell is at the given column index
 				{
 					Matcher m = regPattern.matcher(currentCell.getStringCellValue());	//Attempt to match cell value with given regex value
 					if(m.find()) 
@@ -211,7 +224,7 @@ public class ExcelManager {
 	 * @param workbook
 	 * @return cellstyle
 	 */
-	public CellStyle genBasicCellStyle(IndexedColors backGround, HSSFColorPredefined text, HSSFWorkbook workbook) 
+	public static CellStyle genBasicCellStyle(IndexedColors backGround, HSSFColorPredefined text, HSSFWorkbook workbook) 
 	{
 		CellStyle cs = workbook.createCellStyle();
 		cs.setFillForegroundColor(backGround.getIndex()); 
@@ -227,10 +240,10 @@ public class ExcelManager {
 	
 	public void testfunc() throws FileNotFoundException, IOException 
 	{
-		 HSSFWorkbook workbook =  CreateExcelWorkbook();
+ 		 HSSFWorkbook workbook =  CreateExcelWorkbook();
 		 HSSFSheet sheet = CreateExcelSheet(workbook, "sheet1test");
-		 
-		 setColNames(new String[]{"colname1", "colname2", "colnamek", "oof","fffff"}, workbook, sheet);
+		
+		 setColNames(new String[]{"colname1dddd d d", "colname2", "colnamek", "oof","fffff"}, workbook, sheet);
 		 AppendData(new String[]{"this", "is", "a" , "test", "!"}, workbook, sheet);
 		 AppendData(new String[] {"test", "d a t a", "t e s t", "data"}, workbook, sheet);
 		 AppendData(new String[] {"test", "d a t a", "data", "data"}, workbook, sheet);
@@ -244,7 +257,7 @@ public class ExcelManager {
 		 HSSFWorkbook IAMBACK = OpenExcelWorkbook("D:\\eXCEL\\testSheet.xls");
 		 AppendData(new String[] {"data", "d a t a", "test test test", "data"}, IAMBACK, IAMBACK.getSheet("sheet1test"));
 		 
-		 markMatches("oof", genBasicCellStyle(IndexedColors.BRIGHT_GREEN, HSSFColorPredefined.YELLOW, IAMBACK), 0, IAMBACK, IAMBACK.getSheet("sheet1test"));
+		 markMatches("[d]", genBasicCellStyle(IndexedColors.BRIGHT_GREEN, HSSFColorPredefined.YELLOW, IAMBACK), 0, IAMBACK, IAMBACK.getSheet("sheet1test"));
 		 SaveWorkbook(IAMBACK, "D:\\eXCEL\\testSheet2.xls"); 
 	 }
 
