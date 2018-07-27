@@ -13,6 +13,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -27,9 +28,37 @@ import org.xml.sax.SAXException;
  * @author OmerFaruk.Cikgel
  * @version 1.0
  */
+
+
+
 public class EmptyResourceFinder
 {
-		
+	
+//	private static PrintWriter fOut;
+//	private static StringWriter fStringOut;
+//	public static void ErrorReporter() 
+//	{
+//		 fStringOut = new StringWriter();
+//		 fOut = new PrintWriter(fStringOut, true);
+//	}
+//	
+//	  public static String getOutput() 
+//	  {
+//		  if (fStringOut == null) 
+//		  {
+//			  return null;
+//		  }
+//		  else
+//		  {
+//			  return fStringOut.toString();
+//		  } 
+//	  }
+//	  
+//	  private static void printFileLineMsg(String msg,boolean isError,String fileName,int lineNum)
+//	  {
+//		  fOut.println(fileName + ":" + lineNum + ": "+ (isError ? "Error: " : "Warning: ")+ msg);
+//	  }
+	  
 	private static final String[] pathList = {"D:\\Projects\\jguar_GIT_Set\\jprod\\UnityServer\\WebContent\\Reporting",
 									   "D:\\Projects\\jguar_GIT_Set\\jaf\\LbsApplication.Server\\reporting\\",
 									   "D:\\Projects\\jguar_GIT_Set\\jaf\\LbsWorkflow\\reporting\\"};
@@ -39,6 +68,7 @@ public class EmptyResourceFinder
 	
 	private static FileWriter fw = null;
 	private static HashSet<String> captionFilterList = new HashSet<String>();
+	private static HSSFWorkbook workBook;
 	
 	
 	
@@ -206,14 +236,20 @@ public class EmptyResourceFinder
 			String fileName = element.getOwnerDocument().getDocumentURI().substring(i > 0 ? i + 1 : 0);
 			String objectName = element.getAttribute("type");
 			
+			String controlID = "";
+			String DescriptionCaption = "";
 			String text = "-";
 			NodeList props = element.getElementsByTagName("prop");
 			if(props != null)	
 			{
 				Element prop = findProp(props, forResourceLink ? "Id" : "_ControlID");
 				if(prop != null)
-					text = " " +(forResourceLink ? "Id = " : "_ControlID = ") +prop.getAttribute("value");									
-			
+				{
+					controlID = " " +(forResourceLink ? "Id = " : "_ControlID = ") +prop.getAttribute("value");		
+					text = controlID;			
+				}
+											
+					
 //				prop = findProp(props, forResourceLink ? "Description" : "Caption");
 //				if(prop != null)
 //					text += "\t " +(forResourceLink ? "Description = " : "Caption = ") +prop.getAttribute("value");
@@ -223,12 +259,22 @@ public class EmptyResourceFinder
 				{
 					if(captionFilterList.contains(prop.getAttribute("value")))
 						return;
-					text += "\t " +(forResourceLink ? "Description = " : "Caption = ") +prop.getAttribute("value");
+					
+				    DescriptionCaption = (forResourceLink ? "Description = " : "Caption = ") +prop.getAttribute("value");
+					text += "\t " + DescriptionCaption;
 				}
 			}
 
 			fw.write(fileName + "\t " + objectName + "\t " + text + "\t "+ message+"\n");
-		
+			
+			
+			String[] data = new String[] {fileName, objectName, controlID, DescriptionCaption, message};
+			
+			ExcelManager.AppendData(data, workBook, workBook.getSheet("sheet1"));
+			//System.out.println("adsdas");
+			
+			
+			
 		}
 		
 		catch (IOException e)
@@ -241,6 +287,11 @@ public class EmptyResourceFinder
 	
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException, NullPointerException
 	{
+		
+		workBook = ExcelManager.CreateExcelWorkbook();
+		ExcelManager.CreateExcelSheet(workBook, "sheet1");
+		ExcelManager.setColNames(new String[] {"File Name", "Type", "ID", "Description/Caption", "Msg"}, workBook, workBook.getSheet("sheet1"));
+		
 		
 		HashSet<String> fileExceptionList = new HashSet<String>();
 		
@@ -307,6 +358,8 @@ public class EmptyResourceFinder
 				    	DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 						Document document = documentBuilder.parse(file);
 						validateObjects(document.getDocumentElement());
+						
+						
 //						if (document.hasChildNodes()) 
 //						{
 ////							printNodeList(document.getChildNodes());
@@ -316,6 +369,8 @@ public class EmptyResourceFinder
 			}
 			if(fw != null)
 				fw.close();
+			
+
 			
 //			if(map != null)
 //			{
@@ -338,6 +393,44 @@ public class EmptyResourceFinder
 		{
 			System.out.println(e.getMessage());
 		}
+		
+		
+		for(int h = 0; h < 5; h++) 
+		{
+			workBook.getSheet("sheet1").autoSizeColumn(h);
+		}
+		
+		//ExcelManager.markMatches("[a]", ExcelManager.genBasicCellStyle(IndexedColors.BLUE, HSSFPredefinedColors, workbook), columnIndex, workbook, worksheet)
+		ExcelManager.SaveWorkbook(workBook, "Out.xls");
+		
+		
 	}
+
+
+//
+//	@Override
+//	public void warning(SAXParseException exception) throws SAXException
+//	{
+//		// TODO implement
+//		
+//	}
+//
+//
+//
+//	@Override
+//	public void error(SAXParseException exception) throws SAXException
+//	{
+//		// TODO implement
+//		
+//	}
+//
+//
+//
+//	@Override
+//	public void fatalError(SAXParseException exception) throws SAXException
+//	{
+//		// TODO implement
+//		
+//	}
 }
 
