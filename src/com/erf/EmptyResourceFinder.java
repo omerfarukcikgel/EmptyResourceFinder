@@ -53,38 +53,12 @@ import org.xml.sax.*;
 
 public class EmptyResourceFinder
 {
-	
-//	private static PrintWriter fOut;
-//	private static StringWriter fStringOut;
-//	public static void ErrorReporter() 
-//	{
-//		 fStringOut = new StringWriter();
-//		 fOut = new PrintWriter(fStringOut, true);
-//	}
-//	
-//	  public static String getOutput() 
-//	  {
-//		  if (fStringOut == null) 
-//		  {
-//			  return null;
-//		  }
-//		  else
-//		  {
-//			  return fStringOut.toString();
-//		  } 
-//	  }
-//	  
-//	  private static void printFileLineMsg(String msg,boolean isError,String fileName,int lineNum)
-//	  {
-//		  fOut.println(fileName + ":" + lineNum + ": "+ (isError ? "Error: " : "Warning: ")+ msg);
-//	  }
-	  
+
 	private static final String[] pathList = {"D:\\Projects\\jguar_GIT_Set\\jprod\\UnityServer\\WebContent\\Reporting",
 									   "D:\\Projects\\jguar_GIT_Set\\jaf\\LbsApplication.Server\\reporting\\",
 									   "D:\\Projects\\jguar_GIT_Set\\jaf\\LbsWorkflow\\reporting\\"};
 	
-	
-//	private static HashMap<String,Boolean> map = new HashMap<String,Boolean>();
+
 	
 	private static FileWriter fw = null;
 	private static HashSet<String> captionFilterList = new HashSet<String>();
@@ -237,12 +211,6 @@ public class EmptyResourceFinder
 			}			
 		}
 
-		
-//		if(prop != null &&  prop.getParentNode() != null)
-//			map.put(prop.getParentNode().getAttributes().getNamedItem("type").getNodeValue() + "---R", true);
-//		prop = findProp(props, "CaptionResource");
-//		if(prop != null &&  prop.getParentNode() != null)
-//			map.put(prop.getParentNode().getAttributes().getNamedItem("type").getNodeValue() + "---C", true);
 
 	}
 	
@@ -269,25 +237,14 @@ public class EmptyResourceFinder
 			if(props != null)	
 			{
 				Element prop = findProp(props, forResourceLink ? "Id" : "_ControlID");
-				//LineNumberReader a;
 				
 				if(prop != null)
 				{
-					//int testoboio = lineNumber(props);
-					//System.out.println(testoboio + "");
 					controlID = " " +(forResourceLink ? "Id = " : "_ControlID = ") +prop.getAttribute("value");		
 					text = controlID;			
 				}
 					
-				
-				
-				
-				//String ooooof = prop.getFirstChild().getUserData("lineNumber").toString();
-				//System.out.print(ooooof);
-					
-//				prop = findProp(props, forResourceLink ? "Description" : "Caption");
-//				if(prop != null)
-//					text += "\t " +(forResourceLink ? "Description = " : "Caption = ") +prop.getAttribute("value");
+
 				
 				prop = findProp(props, forResourceLink ? "Description" : "Caption");
 				if(prop != null)
@@ -300,44 +257,57 @@ public class EmptyResourceFinder
 				}
 				
 			}
-			
-			//FileReader fileReader = new FileReader(filePath);
-			//BufferedReader bufferedReader = new BufferedReader(fileReader);
+
 			
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF-16"));
 			
 			String line = null;
-			int lineCount = 0;
+			int lineCount = 1;
+			int sheetCounter = 1;
+			
 			while((line = bufferedReader.readLine()) != null) 
 			{
 				
-				Pattern r = Pattern.compile("\\b(?:" + objectName + "|" + text+")\\b");
+				//type="com.lbs.reporting.JLbsResourceLink" value="0|0"
+				Pattern r = Pattern.compile("value=\"0[|]0");
 				Matcher m = r.matcher(line);
 				if(m.find()) 
 				{
-					System.out.println("Found value: " + m.group(0) );
-			        System.out.println("Found value: " + m.group(1) );
-			        System.out.println("Found value: " + m.group(2) );
+					//System.out.println("Found value: " + m.group(0) +" "+ lineCount);
+					fw.write(fileName + "\t " + objectName + "\t " + text + "\t "+ message +"\t"+ lineCount +"\n");
+					String[] data = new String[] {lineCount+"", fileName, objectName, controlID, DescriptionCaption, message};
+					
+					//if(sheetCounter == 1)
+					//{
+						ExcelManager.AppendData(data, workBook, workBook.getSheet("sheet1"));
+					//}
+					//else
+					//{
+					//	ExcelManager.AppendData(data, workBook, workBook.getSheet("sheet" + sheetCounter));
+					//}
+					lineCount++;
 				}
 				else 
 				{
 					lineCount++;
 				}
 				
+				/*
+				if(lineCount == 12500) 
+				{
+					sheetCounter++;
+					ExcelManager.CreateExcelSheet(workBook, "sheet" + sheetCounter);
+					ExcelManager.setColNames(new String[] {"Line Number", "File Name", "Type", "ID", "Description/Caption", "Msg"}, workBook, workBook.getSheet("sheet" + sheetCounter));	
+					lineCount = 1;
+				}
+				*/
+				
 			}
 			bufferedReader.close();
 			
-			fw.write(fileName + "\t " + objectName + "\t " + text + "\t "+ message+"\n");
-			//cstLocator(props);
 			
 			
-			String[] data = new String[] {fileName, objectName, controlID, DescriptionCaption, message};
-			
-			ExcelManager.AppendData(data, workBook, workBook.getSheet("sheet1"));
-			//System.out.println("adsdas");
-			
-			
-			
+
 		}
 		
 		catch (IOException e)
@@ -370,7 +340,7 @@ public class EmptyResourceFinder
 		
 		workBook = ExcelManager.CreateExcelWorkbook();
 		ExcelManager.CreateExcelSheet(workBook, "sheet1");
-		ExcelManager.setColNames(new String[] {"File Name", "Type", "ID", "Description/Caption", "Msg"}, workBook, workBook.getSheet("sheet1"));
+		ExcelManager.setColNames(new String[] {"Line Number", "File Name", "Type", "ID", "Description/Caption", "Msg"}, workBook, workBook.getSheet("sheet1"));
 		
 		
 		HashSet<String> fileExceptionList = new HashSet<String>();
@@ -395,8 +365,6 @@ public class EmptyResourceFinder
         while ((line=br1.readLine()) != null)
         	captionFilterList.add(line);
 
-        
-        
 		try 
 		{
 		
@@ -421,8 +389,6 @@ public class EmptyResourceFinder
 					
 				    if (file.isFile()) 
 				    {
-//				    	if(list.contains(file.getName()))
-//				    		continue;
 				    	boolean flag = false;
 				    	for(String f : fileExceptionList)
 				    	{
@@ -432,42 +398,21 @@ public class EmptyResourceFinder
 				    			break;
 				    		}	
 				    	}
-				    	if(!flag)
+				    	if(flag)
 				    		continue;
 				    	
 				    	String filePath = file.getAbsolutePath();
-//				    	System.out.println(file.getName());
 				    	DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 						Document document = documentBuilder.parse(file);
 						validateObjects(document.getDocumentElement(), filePath);
 						
-						
-//						if (document.hasChildNodes()) 
-//						{
-////							printNodeList(document.getChildNodes());
-//						}			    
+							    
 				    }
 				}		
 			}
 			if(fw != null)
 				fw.close();
-			
 
-			
-//			if(map != null)
-//			{
-//				for(String key : map.keySet())
-//					System.out.println(key);
-//			}
-
-			
-//			File[] listOfFiles = filterText.listFiles();
-//
-//			for (File file : listOfFiles) {
-//			    if (file.isFile()) {
-//			        System.out.println(file.getName());
-//			    }
-//			}
 			
 			
 		}
@@ -477,7 +422,7 @@ public class EmptyResourceFinder
 		}
 		
 		
-		for(int h = 0; h < 5; h++) 
+		for(int h = 0; h < 6; h++) 
 		{
 			workBook.getSheet("sheet1").autoSizeColumn(h);
 		}
@@ -488,33 +433,6 @@ public class EmptyResourceFinder
 		
 	}
 	
-	
 
-
-//
-//	@Override
-//	public void warning(SAXParseException exception) throws SAXException
-//	{
-//		// TODO implement
-//		
-//	}
-//
-//
-//
-//	@Override
-//	public void error(SAXParseException exception) throws SAXException
-//	{
-//		// TODO implement
-//		
-//	}
-//
-//
-//
-//	@Override
-//	public void fatalError(SAXParseException exception) throws SAXException
-//	{
-//		// TODO implement
-//		
-//	}
 }
 
