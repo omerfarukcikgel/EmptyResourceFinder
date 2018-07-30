@@ -2,22 +2,42 @@ package com.erf;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.ContentHandler;
 import java.util.HashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.SourceLocator;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
+import javax.xml.transform.sax.SAXSource;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
+import org.xml.sax.helpers.XMLReaderFactory;
+
+import com.sun.org.apache.xml.internal.dtm.DTM;
+import com.sun.org.apache.xml.internal.dtm.ref.DTMNodeProxy;
+
+import org.xml.sax.*;
 
 /**
  * <p>Title: EmptyResourceFinder.java</p>
@@ -69,6 +89,7 @@ public class EmptyResourceFinder
 	private static FileWriter fw = null;
 	private static HashSet<String> captionFilterList = new HashSet<String>();
 	private static HSSFWorkbook workBook;
+
 	
 	
 	
@@ -139,7 +160,7 @@ public class EmptyResourceFinder
 	}
 	
 	
-	private static void validateObjects(Element element) throws ParserConfigurationException, SAXException, IOException, TransformerException
+	private static void validateObjects(Element element, String filePath) throws ParserConfigurationException, SAXException, IOException, TransformerException
 	{
 		NodeList list = element.getElementsByTagName("object");
 		Element subElement;
@@ -148,11 +169,11 @@ public class EmptyResourceFinder
 		for (int i = 0; i < list.getLength(); i++)
 		{
 			subElement = (Element) list.item(i);
-			validateObject(subElement);
+			validateObject(subElement, filePath);
 		}
 	}
 	
-	private static void validateObject(Element element) throws ParserConfigurationException, SAXException, IOException, TransformerException
+	private static void validateObject(Element element, String filePath) throws ParserConfigurationException, SAXException, IOException, TransformerException
 	{
 		String type = element.getAttribute("type");
 		
@@ -178,7 +199,7 @@ public class EmptyResourceFinder
 		{
 			if(prop == null)
 			{
-				addResourceMissingLine(element,forResourceLink ? "ResourceLink eksik" : "CaptionResource eksik", forResourceLink);
+				addResourceMissingLine(element,forResourceLink ? "ResourceLink eksik" : "CaptionResource eksik", forResourceLink, filePath);
 			}
 			else
 			{
@@ -187,14 +208,14 @@ public class EmptyResourceFinder
 				
 				if(value == null || value.length() == 0)
 				{
-					addResourceMissingLine(element,"value eksik", forResourceLink);
+					addResourceMissingLine(element,"value eksik", forResourceLink, filePath);
 				}
 				else
 				{
 					String x[] = value.split("\\|");
 					if(x == null || x.length != 2)
 					{
-						addResourceMissingLine(element,"value değeri yanlış girilmiş", forResourceLink);
+						addResourceMissingLine(element,"value değeri yanlış girilmiş", forResourceLink, filePath);
 					}
 					else
 					{
@@ -202,12 +223,14 @@ public class EmptyResourceFinder
 						{	
 							if(Integer.valueOf(x[0]) == 0)
 							{
-								addResourceMissingLine(element,"value değerleri 0 girilmiş", forResourceLink);
+								addResourceMissingLine(element,"value değerleri 0 girilmiş", forResourceLink, filePath);
 							}
 						}
 						catch (Exception e) 
 						{
-							addResourceMissingLine(element,"value değerlerini numeric girilmemiş", forResourceLink);
+							System.out.println(e);
+							addResourceMissingLine(element,"value değerlerini numeric girilmemiş", forResourceLink, filePath);
+							
 						}
 					}
 				}
@@ -223,7 +246,7 @@ public class EmptyResourceFinder
 
 	}
 	
-	private static void addResourceMissingLine(Element element, String message, boolean forResourceLink) throws IOException
+	private static void addResourceMissingLine(Element element, String message, boolean forResourceLink, String filePath) throws IOException
 	{
 		
 		try
@@ -239,16 +262,28 @@ public class EmptyResourceFinder
 			String controlID = "";
 			String DescriptionCaption = "";
 			String text = "-";
+			
+
+			
 			NodeList props = element.getElementsByTagName("prop");
 			if(props != null)	
 			{
 				Element prop = findProp(props, forResourceLink ? "Id" : "_ControlID");
+				//LineNumberReader a;
+				
 				if(prop != null)
 				{
+					//int testoboio = lineNumber(props);
+					//System.out.println(testoboio + "");
 					controlID = " " +(forResourceLink ? "Id = " : "_ControlID = ") +prop.getAttribute("value");		
 					text = controlID;			
 				}
-											
+					
+				
+				
+				
+				//String ooooof = prop.getFirstChild().getUserData("lineNumber").toString();
+				//System.out.print(ooooof);
 					
 //				prop = findProp(props, forResourceLink ? "Description" : "Caption");
 //				if(prop != null)
@@ -259,13 +294,41 @@ public class EmptyResourceFinder
 				{
 					if(captionFilterList.contains(prop.getAttribute("value")))
 						return;
-					
+
 				    DescriptionCaption = (forResourceLink ? "Description = " : "Caption = ") +prop.getAttribute("value");
 					text += "\t " + DescriptionCaption;
 				}
+				
 			}
-
+			
+			//FileReader fileReader = new FileReader(filePath);
+			//BufferedReader bufferedReader = new BufferedReader(fileReader);
+			
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF-16"));
+			
+			String line = null;
+			int lineCount = 0;
+			while((line = bufferedReader.readLine()) != null) 
+			{
+				
+				Pattern r = Pattern.compile("\\b(?:" + objectName + "|" + text+")\\b");
+				Matcher m = r.matcher(line);
+				if(m.find()) 
+				{
+					System.out.println("Found value: " + m.group(0) );
+			        System.out.println("Found value: " + m.group(1) );
+			        System.out.println("Found value: " + m.group(2) );
+				}
+				else 
+				{
+					lineCount++;
+				}
+				
+			}
+			bufferedReader.close();
+			
 			fw.write(fileName + "\t " + objectName + "\t " + text + "\t "+ message+"\n");
+			//cstLocator(props);
 			
 			
 			String[] data = new String[] {fileName, objectName, controlID, DescriptionCaption, message};
@@ -283,6 +346,23 @@ public class EmptyResourceFinder
 		}
 
 	} 
+	
+	
+	public static int lineNumber(NodeList nodeList)
+	{
+	  if (nodeList == null || nodeList.getLength() == 0)
+	    return -1;
+
+	  Node node = (Node) nodeList.item(0);
+	  int nodeHandler = ((DTMNodeProxy) node).getDTMNodeNumber();
+	  DTM dtm = ((DTMNodeProxy)node).getDTM();
+	  SourceLocator locator = dtm.getSourceLocatorFor(nodeHandler);
+
+	  if (locator != null)
+	    return locator.getLineNumber();
+	  else
+	    return -1;
+	}
 
 	
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException, NullPointerException
@@ -295,7 +375,7 @@ public class EmptyResourceFinder
 		
 		HashSet<String> fileExceptionList = new HashSet<String>();
 		
-		FileReader fr = new FileReader("D:\\Exception.txt");
+		FileReader fr = new FileReader("Exception.txt");
 		BufferedReader br = new BufferedReader(fr);
 				
 		
@@ -306,8 +386,10 @@ public class EmptyResourceFinder
 
         
         
-		FileReader fr1 = new FileReader("D:\\a.txt");
+		FileReader fr1 = new FileReader("a.txt");
 		BufferedReader br1 = new BufferedReader(fr1);	
+		
+		
 		
  
         while ((line=br1.readLine()) != null)
@@ -352,12 +434,12 @@ public class EmptyResourceFinder
 				    	}
 				    	if(!flag)
 				    		continue;
-
 				    	
+				    	String filePath = file.getAbsolutePath();
 //				    	System.out.println(file.getName());
 				    	DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 						Document document = documentBuilder.parse(file);
-						validateObjects(document.getDocumentElement());
+						validateObjects(document.getDocumentElement(), filePath);
 						
 						
 //						if (document.hasChildNodes()) 
@@ -405,6 +487,8 @@ public class EmptyResourceFinder
 		
 		
 	}
+	
+	
 
 
 //
