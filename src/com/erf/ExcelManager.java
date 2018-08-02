@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -18,11 +19,14 @@ import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.hssf.util.HSSFColor.HSSFColorPredefined;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
 
 public class ExcelManager {
 	
@@ -85,6 +89,62 @@ public class ExcelManager {
 			return null;
 		}
 	}
+	
+	/**
+	 * Reads the given row turns data into string array
+	 * @param workbook
+	 * @param worksheet
+	 * 
+	 * @param rowIndex
+	 * @return
+	 */
+	public static String[] ReadRow(HSSFWorkbook workbook, HSSFSheet worksheet, int rowIndex) 
+	{
+		HSSFRow row = worksheet.getRow(rowIndex);
+		ArrayList<String> data = new ArrayList<String>();
+		
+		Iterator<Cell> cellIterator = (row).cellIterator();
+		while(cellIterator.hasNext()) 
+		{
+			Cell c = cellIterator.next();
+			
+			//Data formatter
+			DataFormatter formatter = new DataFormatter();
+			String value = formatter.formatCellValue(c);
+			//c.getStringCellValue()
+			data.add(value);
+		}
+		String[] dataArray = new String[data.size()];
+		dataArray = data.toArray(dataArray);
+		return dataArray;
+	}
+	
+	/**
+	 * Reads the rows between start and end indexes returns them in an arraylist
+	 * @param readStartIndex
+	 * @param readEndIndex
+	 * @return
+	 */
+	public static ArrayList<String[]> ReadAllRows(HSSFWorkbook workbook, HSSFSheet worksheet, int readStartIndex, int readEndIndex)
+	{
+		Iterator<Row> rowIterator = worksheet.rowIterator();
+		ArrayList<String[]> dataList = new ArrayList<String[]>();
+	
+		while(rowIterator.hasNext()) 
+		{
+			HSSFRow row = ((HSSFRow)rowIterator.next());
+			int rowIndex = (row).getRowNum();
+			
+			if(rowIndex >= readStartIndex && rowIndex <= readEndIndex) 
+			{
+				String[] data = ReadRow(workbook, worksheet, rowIndex);
+				dataList.add(data);
+			}
+		}
+		return dataList;
+ 	}
+	
+	
 	
 	/**
 	 * Appends given string array to a row
@@ -202,6 +262,18 @@ public class ExcelManager {
 		}
 		return changeCount;
 	}
+	//TODO: Take row from sheet and paint 
+	public static void markLastRow( CellStyle style, HSSFWorkbook workbook, HSSFSheet worksheet) 
+	{
+		HSSFRow lastRow = worksheet.getRow(worksheet.getLastRowNum());
+		
+		Iterator<Cell> cellIterator = (lastRow).cellIterator();
+		while(cellIterator.hasNext()) 
+		{
+			Cell c = cellIterator.next();
+			c.setCellStyle(style);
+		}
+	}
 	
 	/**
 	 * Appends a list, every element is written to a different row.
@@ -238,11 +310,6 @@ public class ExcelManager {
 		
 	}
 	
-	
-	public static void appendTree() 
-	{
-		
-	}
 	
 	public void testfunc() throws FileNotFoundException, IOException 
 	{

@@ -3,13 +3,13 @@ package com.erf;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.ContentHandler;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,27 +17,14 @@ import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.SourceLocator;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMResult;
-import javax.xml.transform.sax.SAXSource;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
-import org.xml.sax.helpers.XMLReaderFactory;
 
-import com.sun.org.apache.xml.internal.dtm.DTM;
-import com.sun.org.apache.xml.internal.dtm.ref.DTMNodeProxy;
-
-import org.xml.sax.*;
 
 /**
  * <p>Title: EmptyResourceFinder.java</p>
@@ -133,21 +120,48 @@ public class EmptyResourceFinder
 		return null;
 	}
 	
-	
+	static Duration total = Duration.ZERO;
+	static int filenum = 0;
 	private static void validateObjects(Element element, String filePath) throws ParserConfigurationException, SAXException, IOException, TransformerException
 	{
 		NodeList list = element.getElementsByTagName("object");
 		Element subElement;
 		if(list == null)
+		{
 			return;
+		}
+		
+		
+		//TODO: LORPItemPurchaseSalesExtract Hatalı dosya!!!!!!!!!! 
+		if(filePath.equals("D:\\Projects\\jguar_GIT_Set\\jprod\\UnityServer\\WebContent\\Reporting\\LORPItemPurchaseSalesExtract.jrf")) 
+		{
+			return;
+		}
+		
+		
+		//Reader here
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF-16"));
+		int lineNumber = 1;
+	
+		filenum++;
+		
+		Instant sarts = Instant.now();
 		for (int i = 0; i < list.getLength(); i++)
 		{
 			subElement = (Element) list.item(i);
-			validateObject(subElement, filePath);
+			lineNumber = validateObject(subElement, bufferedReader, lineNumber);
 		}
+		Instant ends = Instant.now();
+		Duration dur = Duration.between(sarts, ends);
+		total = total.plus(dur);
+		System.out.println("File #" + filenum + " | Time: " + dur + " | for: " + filePath + " | total time elapsed: " + total);
+		
+		bufferedReader.close();
 	}
 	
-	private static void validateObject(Element element, String filePath) throws ParserConfigurationException, SAXException, IOException, TransformerException
+	
+	
+	private static int validateObject(Element element, BufferedReader bufferedReader, int linec) throws ParserConfigurationException, SAXException, IOException, TransformerException
 	{
 		String type = element.getAttribute("type");
 		
@@ -169,11 +183,14 @@ public class EmptyResourceFinder
 			prop = findProp(props, "CaptionResource");
 		}
 		
+		
+		int linesRead = 0;
+		
 		if(canCheck)
 		{
 			if(prop == null)
 			{
-				addResourceMissingLine(element,forResourceLink ? "ResourceLink eksik" : "CaptionResource eksik", forResourceLink, filePath);
+				linesRead = addResourceMissingLine(element,forResourceLink ? "ResourceLink eksik" : "CaptionResource eksik", forResourceLink, bufferedReader, linec);
 			}
 			else
 			{
@@ -182,14 +199,14 @@ public class EmptyResourceFinder
 				
 				if(value == null || value.length() == 0)
 				{
-					addResourceMissingLine(element,"value eksik", forResourceLink, filePath);
+					linesRead = addResourceMissingLine(element,"value eksik", forResourceLink, bufferedReader, linec);
 				}
 				else
 				{
 					String x[] = value.split("\\|");
 					if(x == null || x.length != 2)
 					{
-						addResourceMissingLine(element,"value değeri yanlış girilmiş", forResourceLink, filePath);
+						linesRead = addResourceMissingLine(element,"value değeri yanlış girilmiş", forResourceLink, bufferedReader, linec);
 					}
 					else
 					{
@@ -197,24 +214,30 @@ public class EmptyResourceFinder
 						{	
 							if(Integer.valueOf(x[0]) == 0)
 							{
-								addResourceMissingLine(element,"value değerleri 0 girilmiş", forResourceLink, filePath);
+								linesRead = addResourceMissingLine(element,"value değerleri 0 girilmiş", forResourceLink, bufferedReader, linec);
 							}
 						}
 						catch (Exception e) 
 						{
 							System.out.println(e);
-							addResourceMissingLine(element,"value değerlerini numeric girilmemiş", forResourceLink, filePath);
+							linesRead = addResourceMissingLine(element,"value değerlerini numeric girilmemiş", forResourceLink, bufferedReader, linec);
 							
 						}
 					}
 				}
-			}			
+			}
+			return linesRead;
+		}
+		else 
+		{
+			return linesRead;
 		}
 
 
 	}
 	
-	private static void addResourceMissingLine(Element element, String message, boolean forResourceLink, String filePath) throws IOException
+	//static ArrayList<String> processedFiles = new ArrayList<String>();
+	private static int addResourceMissingLine(Element element, String message, boolean forResourceLink, BufferedReader bufferedReader, int linec) throws IOException
 	{
 		
 		try
@@ -229,7 +252,8 @@ public class EmptyResourceFinder
 			
 			String controlID = "";
 			String DescriptionCaption = "";
-			String text = "-";
+			String captionResourceLink = "";
+			//String text = "-";
 			
 
 			
@@ -241,98 +265,72 @@ public class EmptyResourceFinder
 				if(prop != null)
 				{
 					controlID = " " +(forResourceLink ? "Id = " : "_ControlID = ") +prop.getAttribute("value");		
-					text = controlID;			
+					//text = controlID;			
 				}
 					
-
 				
+				prop = findProp(props, forResourceLink ? "ResourceLink" : "Caption");
+                if(prop != null)
+                {
+                      if(captionFilterList.contains(prop.getAttribute("value")))
+                             return 0;
+
+                      captionResourceLink = (forResourceLink ? "ResourceLink = " : "CaptionResource = ") +prop.getAttribute("value");
+                      //text += "\t " + captionResourceLink;
+               } 
+
+
 				prop = findProp(props, forResourceLink ? "Description" : "Caption");
 				if(prop != null)
 				{
 					if(captionFilterList.contains(prop.getAttribute("value")))
-						return;
+						return 0;
 
 				    DescriptionCaption = (forResourceLink ? "Description = " : "Caption = ") +prop.getAttribute("value");
-					text += "\t " + DescriptionCaption;
+					//text += "\t " + DescriptionCaption;
 				}
 				
 			}
-
-			
-			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF-16"));
 			
 			String line = null;
-			int lineCount = 1;
-			int sheetCounter = 1;
+			int lineCount = linec;
+
 			
+			//Count lines if the line is found return the linecounter
 			while((line = bufferedReader.readLine()) != null) 
 			{
-				
-				//type="com.lbs.reporting.JLbsResourceLink" value="0|0"
-				Pattern r = Pattern.compile("value=\"0[|]0");
+			
+				//Pattern r = Pattern.compile("(?=.*"+ objectName + ")" +"(?=.*(value=\"0[|]0))"); // + "(?=.*(type=\"" + objectName + "))"
+				//(?=.*(value=\"0[|]0\"))(?=.*(" + "name=\"" + captionResourceLink +  "\"" + "))
+				Pattern r = Pattern.compile("(?=.*(value=\"0[|]0))");
 				Matcher m = r.matcher(line);
 				if(m.find()) 
 				{
-					//System.out.println("Found value: " + m.group(0) +" "+ lineCount);
-					fw.write(fileName + "\t " + objectName + "\t " + text + "\t "+ message +"\t"+ lineCount +"\n");
-					String[] data = new String[] {lineCount+"", fileName, objectName, controlID, DescriptionCaption, message};
+
+					//fw.write(fileName + "\t " + objectName + "\t " + text + "\t "+ message +"\t"+ lineCount +"\n");
+					String[] data = new String[] {(lineCount)+"", fileName, objectName, controlID, captionResourceLink, DescriptionCaption, message};
+					ExcelManager.AppendData(data, workBook, workBook.getSheet("sheet1"));
 					
-					//if(sheetCounter == 1)
-					//{
-						ExcelManager.AppendData(data, workBook, workBook.getSheet("sheet1"));
-					//}
-					//else
-					//{
-					//	ExcelManager.AppendData(data, workBook, workBook.getSheet("sheet" + sheetCounter));
-					//}
-					lineCount++;
+					return lineCount + 1;
 				}
 				else 
 				{
 					lineCount++;
 				}
-				
-				/*
-				if(lineCount == 12500) 
-				{
-					sheetCounter++;
-					ExcelManager.CreateExcelSheet(workBook, "sheet" + sheetCounter);
-					ExcelManager.setColNames(new String[] {"Line Number", "File Name", "Type", "ID", "Description/Caption", "Msg"}, workBook, workBook.getSheet("sheet" + sheetCounter));	
-					lineCount = 1;
-				}
-				*/
-				
-			}
-			bufferedReader.close();
-			
-			
-			
 
+			}
+			
+			
+			return 0;	//TODO: Throw exception here, no item found with regular expression given
 		}
 		
 		catch (IOException e)
 		{
 			System.out.println(e);
 		}
+		return 0;
 
 	} 
-	
-	
-	public static int lineNumber(NodeList nodeList)
-	{
-	  if (nodeList == null || nodeList.getLength() == 0)
-	    return -1;
-
-	  Node node = (Node) nodeList.item(0);
-	  int nodeHandler = ((DTMNodeProxy) node).getDTMNodeNumber();
-	  DTM dtm = ((DTMNodeProxy)node).getDTM();
-	  SourceLocator locator = dtm.getSourceLocatorFor(nodeHandler);
-
-	  if (locator != null)
-	    return locator.getLineNumber();
-	  else
-	    return -1;
-	}
 
 	
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException, NullPointerException
@@ -340,12 +338,12 @@ public class EmptyResourceFinder
 		
 		workBook = ExcelManager.CreateExcelWorkbook();
 		ExcelManager.CreateExcelSheet(workBook, "sheet1");
-		ExcelManager.setColNames(new String[] {"Line Number", "File Name", "Type", "ID", "Description/Caption", "Msg"}, workBook, workBook.getSheet("sheet1"));
+		ExcelManager.setColNames(new String[] {"Line Number", "File Name", "Type", "ID", "CaptionResourceLink", "Description/Caption", "Msg"}, workBook, workBook.getSheet("sheet1"));
 		
 		
 		HashSet<String> fileExceptionList = new HashSet<String>();
 		
-		FileReader fr = new FileReader("Exception.txt");
+		FileReader fr = new FileReader("D:\\Exception.txt");
 		BufferedReader br = new BufferedReader(fr);
 				
 		
@@ -353,10 +351,10 @@ public class EmptyResourceFinder
 
         while ((line=br.readLine()) != null)
         	 fileExceptionList.add(line);
-
+        br.close();
         
         
-		FileReader fr1 = new FileReader("a.txt");
+		FileReader fr1 = new FileReader("D:\\a.txt");
 		BufferedReader br1 = new BufferedReader(fr1);	
 		
 		
@@ -364,6 +362,7 @@ public class EmptyResourceFinder
  
         while ((line=br1.readLine()) != null)
         	captionFilterList.add(line);
+        br1.close();
 
 		try 
 		{
@@ -422,14 +421,18 @@ public class EmptyResourceFinder
 		}
 		
 		
-		for(int h = 0; h < 6; h++) 
+		for(int h = 0; h < 7; h++) 
 		{
 			workBook.getSheet("sheet1").autoSizeColumn(h);
 		}
 		
 		//ExcelManager.markMatches("[a]", ExcelManager.genBasicCellStyle(IndexedColors.BLUE, HSSFPredefinedColors, workbook), columnIndex, workbook, worksheet)
-		ExcelManager.SaveWorkbook(workBook, "Out.xls");
 		
+		
+		
+		
+		ExcelManager.SaveWorkbook(workBook, "Out.xls");
+		System.out.println("Bitti, Excel @ " + System.getenv("SystemDrive") + "\\Out.xls");
 		
 	}
 	
