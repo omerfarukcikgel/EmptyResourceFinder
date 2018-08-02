@@ -9,7 +9,9 @@ import java.util.Calendar;
 import java.util.HashSet;
 
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JProgressBar;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -261,14 +263,40 @@ public class EmptyResourceFinder
 		
 	}
 
+
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException, NullPointerException
 	{
-		if(JOptionPane.showConfirmDialog(new JFrame(),  "C:\\exception.txt = dosya filtresi \nC:\\resultFilter.txt = sonuç filtresi \ndosyalarını kullanılarak işlem başlatıldı.", "Excel Kayıt İşlemi", JOptionPane.YES_NO_OPTION)  == JOptionPane.YES_OPTION)
-		{
+		if(JOptionPane.showConfirmDialog(new JFrame(),  "C:\\exception.txt  (dosya filtresi) \nC:\\resultFilter.txt  (sonuç filtresi) \ndosyalarını kullanılarak işlem başlatıldı.", "Excel Kayıt İşlemi", JOptionPane.YES_NO_OPTION)  == JOptionPane.YES_OPTION)
+		{	    
+
+			String excelFileName = "Out_"+Calendar.getInstance().getTimeInMillis()+".xls";
+			final int max = excelFileName.length();
+			final JFrame frame = new JFrame("Excel Kayıt İşlemi");
+			
+			frame.pack();
+			frame.setLocationRelativeTo(null);
+			
+			final JProgressBar pb = new JProgressBar();
+			pb.setMaximum(max);
+			pb.setStringPainted(true);
+			
+			JLabel label=new JLabel("Çalışıyor..");
+		    frame.getContentPane().add(label);
+		    label.setHorizontalAlignment(JLabel.CENTER);
+		    frame.setVisible(true);
+			
+			frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+			frame.setSize(300, 100);
+			frame.setVisible(true);
+
+			
+			
+			
+			
 			workBook = ExcelManager.CreateExcelWorkbook();
 			ExcelManager.CreateExcelSheet(workBook, "sheet");
-			ExcelManager.setColNames(new String[] { "File Name", "Type", "ID", "CaptionResourceLink", "Description/Caption", "Msg" },
-					workBook, workBook.getSheet("sheet"));
+			ExcelManager.setColNames(new String[] { "File Name", "Type", "ID", "CaptionResourceLink", "Description/Caption", "Msg" },workBook, workBook.getSheet("sheet"));
+
 			
 			String line;
 	
@@ -366,9 +394,14 @@ public class EmptyResourceFinder
 			
 			//ExcelManager.markMatches("[a]", ExcelManager.genBasicCellStyle(IndexedColors.BLUE, HSSFPredefinedColors, workbook), columnIndex, workbook, worksheet)
 	
-			String excelFileName = "Out_"+Calendar.getInstance().getTimeInMillis()+".xls";
+//			String excelFileName = "Out_"+Calendar.getInstance().getTimeInMillis()+".xls";
 			ExcelManager.SaveWorkBook(workBook, excelFileName);
-			JOptionPane.showMessageDialog(new JFrame(), excelFileName+" dosyası oluşturuldu.\nİşleminiz tamamlanmıştır.", "Excel Kayıt İşlemi",JOptionPane.ERROR_MESSAGE);
-		}	
+			JOptionPane.showMessageDialog(new JFrame(), excelFileName+" dosyası oluşturuldu.\nİşleminiz tamamlanmıştır.", "Excel Kayıt İşlemi",JOptionPane.INFORMATION_MESSAGE);
+			System.exit(0);
+		}
+		else
+		{
+			System.exit(0);
+		}
 	}
 }
